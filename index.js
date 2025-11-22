@@ -58,6 +58,35 @@ app.get('/player/:steam_id', async (req, res) => {
   }
 });
 
+// Простой GET для тестирования установки доната
+app.get('/player/:steam_id/setdonate/:coins', async (req, res) => {
+  const { steam_id, coins } = req.params;
+  
+  try {
+    const client = await pool.connect();
+    const result = await client.query(
+      `UPDATE players 
+       SET donate_coins = $1, last_seen = CURRENT_TIMESTAMP 
+       WHERE steam_id = $2 
+       RETURNING *`,
+      [parseInt(coins), steam_id]
+    );
+    client.release();
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Player not found' });
+    } else {
+      res.json({
+        message: 'Donate coins updated successfully!',
+        player: result.rows[0]
+      });
+    }
+  } catch (err) {
+    console.error('Error updating donate coins:', err);
+    res.status(500).json({ error: 'Failed to update donate coins' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
